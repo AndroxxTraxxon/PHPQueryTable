@@ -4,7 +4,7 @@
  * Licensed under MIT
  */
 
- /**
+ /*
   * Some comventions in this script:
   * Variables that are jQuery objects have names proceeded by a '$' (because jQuery is $)
   */
@@ -17,17 +17,62 @@
  * @version 0.0.1
  * @author David Culbreth
  */
-
+/** Class representing a Table*/
 class PHPQueryTable {
+  /**
+   * Initialize the Table with presets and user settings and 
+   * Set up all button triggers.
+   * @param {HTMLElement} rootElement - The element in which to put the table, preferably a div.
+   * @param {Object} [options] - Array of settings that define the behavior of said table.
+   * @param {String} [options.url] - The url of the associated PHP script for AJAX calls.
+   * @param {String} [options.inputClass=form-control input-sm] - The CSS class of the inputs used in the table during edit mode. Default uses Bootstrap.css.
+   * @param {String} [options.toolbarClass=btn-toolbar] - The CSS class of the buttons used in the toolbar during when the table is editable.
+   * @param {String} [options.groupClass=btn-group btn-group-sm] - The CSS class of the button group used in the toolbar when the table is editable. Default uses Bootstrap.css.
+   * @param {String} [options.warningClass=warning] - The CSS class for the warning buttons in the table (I.E. Delete/Confirm). Default uses Bootstrap.css.
+   * @param {String} [options.mutedClass=text-muted] - The CSS class for muted text on the table. Default uses Bootstrap.css.
+   * @param {String} [options.eventType=click] - The event that is used to trigger the edit mode. If 'dblclick' (for double click), then the Edit buttons will not be shown in the toolbar.
+   * @param {String} [options.rowIdentifier=id] - The name of the ID/Primary Key column.
+   * @param {boolean} [options.hideIdentifier=false] - Whether to hide the column that contains the ID/PK identified with options.rowIdentifier.
+   * @param {boolean} [options.toolbar=true] - Whether to display the toolbar.
+   * @param {boolean} [options.autoFocus=true] - Whether to autoFocus when going into edit mode.
+   * @param {boolean} [options.editButton=true] - Whether to show the edit button on the toolbar - Overridden as False if options.eventType is 'dblclick'.
+   * @param {boolean} [options.deleteButton=true] - Whether to show the delete button on the toolbar .
+   * @param {boolean} [options.saveButton=true] - Whether to show the save button on the toolbar.
+   * @param {boolean} [options.restoreButton=true] - Whether to show the restore button on the toolbar.
+   * @todo Implement Refresh button
+   * @param {boolean} [options.refreshButton=false] - NOT IMPLEMENTED Whether to show the refresh button in the header toolbar.
+   * @param {boolean} [options.rowNumberer=false] - Whether to display a row number column on the right side of the data in the table.
+   * @todo Implement New Record functionality
+   * @param {boolean} [options.newLine=false] - NOT IMPLEMENTED Whether to display the "Add New Record" option as the bottom row of the table.
+   * @param {Object} [options.buttons] - Content, CSS Style Classes, and associated actions of the buttons on the tables.
+   * @param {Object} [options.formats] - Various formatting strings
+   * @param {String} [options.formats.date=MM/DD/YYYY] - Moment.js Formatting string for the Date types
+   * @param {boolean} [options.useDefaultColumnNames=false] - Whether to use column names from metadata or from options.
+   * @param {Object[]} [options.columns] - Properties of various columns
+   * @param {String} [options.columns[].Name] - Override name for the column: either all of the names must be set, or none of them can be set.
+   * @param {String} [options.columns[].Type] - Defines how to display a column (select, text, etc.)
+   * @param {number} [options.pageLength=20] - Defines how many records to show per page.
+   * @param {boolean} [options.debug] - Whether to enable verbose debug console output.
+
+   */
   constructor(rootElement, options){
     if (typeof jQuery === 'undefined') {
       throw new Error('PHPQueryTable requires jQuery library.');
     }
+    if (typeof rootElement === 'undefined'){
+      throw new Error('PHPQueryTable requires an element to render the table.');
+    }
+    /** @var {Object[]} */
     this.data = undefined;
+    /** @var {Object[]} */
     this.metadata = undefined;
+    /** @var {Object[]} */
     this.editedRows = [];
+    /** @var {Object[]} */
     this.deletedRows = [];
+    /** @var {Object[]} */
     this.pendingRowRequests = [];
+    /** @var {boolean} */
     this.nav_drawn = false;
     var defaults = {
       url: undefined,
@@ -97,17 +142,16 @@ class PHPQueryTable {
           class: 'btn btn-sm btn-primary',
           html: '<i class = "fa fa-fast-backward fa-2x"></i>'
         }
-
       },
       formats: {
         date: 'MM/DD/YYYY'
       },
-      onLoad: function() { return; },
-      onDraw: function() { return; },
-      onSuccess: function() { return; },
-      onFail: function() { return; },
-      onAlways: function() { return; },
-      onAjax: function() { return; },
+      // onLoad: function() { return; },
+      // onDraw: function() { return; },
+      // onSuccess: function() { return; },
+      // onFail: function() { return; },
+      // onAlways: function() { return; },
+      // onAjax: function() { return; },
       useDefaultColumnNames: true,
       rootElementType: "div",
       pageLength: 20,
@@ -291,6 +335,8 @@ class PHPQueryTable {
       this.draw();
     }
   }
+
+  /**Draws the Nav bar below the table, or updates it if it has alredy been drawn.*/
   drawPQTNav(){
     var PQT = this;
     var $nav;
@@ -319,6 +365,7 @@ class PHPQueryTable {
     PQT.nav_drawn = true;
   }
 
+  /**Draws the table inside the designated element (inside the div, if div supplied)*/
   draw(){
     this.$table.html("");
     var $table = this.$table;
@@ -480,7 +527,7 @@ class PHPQueryTable {
             var input = '';
             var span = '<span class="PQT-span">' + text + '</span>';
 
-            if(obj.settings.columns !== undefined && obj.settings.columns[i].type === 'select'){
+            if(obj.settings.columns !== undefined && obj.settings.columns[i].Type === 'select'){
               // Create select element.
               input += '<select class="PQT-input ' + obj.settings.inputClass + '" name="' + obj.metadata[i].Name + '" style="display: none;" disabled>'
               // Create options for select element.
@@ -552,7 +599,9 @@ class PHPQueryTable {
       }
     }
   }
-
+  /**Sets the column names of the table in the header row and redraws the table.
+  * @param {String[]} options - The names of the columns.
+  */
   setColumnNames(options){
     if(!Array.isArray(options)){
       throw new Error("Cannot use non-array object for column Names");
@@ -564,8 +613,9 @@ class PHPQueryTable {
       this.settings.columns[i].Name = options[i];
     }
     this.settings.useDefaultColumnNames = false;
+    this.draw();
   }
-
+  /** Switches the table from edit mode into view mode.*/
   viewMode(td){
     var $tr = $(td).parent('tr');
     // Hide and disable input element.
@@ -580,7 +630,9 @@ class PHPQueryTable {
         $tr.find('button.PQT-edit-button').removeClass('active').blur();
     }
   }
-
+  /** Resets the Delete button in a given row to its normal (unactivated) state.
+  * @param {HTMLElement} td - The td element in the row of the Delete button to be reset.
+  */
   resetDeleteButton(td) {
     if(this.settings.editable){
       // Reset delete button to initial status.
@@ -591,7 +643,9 @@ class PHPQueryTable {
       throw new Error("resetDeleteButton(td) is only available in when the PQT is editable.");
     }
   }
-
+  /** Switches the table from view mode into edit mode.
+  * @param {HTMLElement} td The td element in the row that is to be edited.
+  */
   editMode(td){
     if(this.settings.editable){
       this.resetDeleteButton(td);
@@ -621,7 +675,9 @@ class PHPQueryTable {
       throw new Error("editMode(td) is only available in when the PQT is editable.");
     }
   }
-
+  /** Triggered by clicking the Delete button, shows the confirm button below the Delete button.
+  * @param {HTMLElement} td - The td element in the row to show the Confirm button.
+  */
   showConfirmDeleteButton(td){
     var obj = this;
     if(this.settings.editable){
@@ -645,6 +701,9 @@ class PHPQueryTable {
       throw new Error("showConfirmDeleteButton(td) is only available in when the PQT is editable.");
     }
   }
+  /**
+  * @param {HTMLElement} td - The td element in the row to delete.
+  */
   confirmDelete(td) {
     if(this.settings.editable){
       this.resetDeleteButton(td);
@@ -662,8 +721,10 @@ class PHPQueryTable {
     }else{
       throw new Error("confirmDelete(td) is only available in when the PQT is editable.");
     }
-
   }
+  /** Resets the Table to View Mode while in Edit Mode, discarding any changes.
+  * @param {HTMLElement} td - The td element in the row to be reset.
+  */
   editReset(td){
     var PQT = this;
     $(td).each(function() {
@@ -683,6 +744,10 @@ class PHPQueryTable {
         PQT.viewMode(this);
     });
   }
+
+  /** Saves any changes and records the row as an edited row in this.editedRows
+  * @param {HTMLElement} The td of the row to be saved/closed.
+  */
   confirmEdit(td){
     var PQT = this;
     if(this.settings.editable){
@@ -704,29 +769,31 @@ class PHPQueryTable {
       }
     }
   }
-
+  /** Deletes settings.columns[].names so that the default names are used.*/
   resetColumnNames(){
     for(var i = 0; i < this.settings.columns.length; i++){
       this.settings.columns[i].Name = undefined;
     }
     this.settings.useDefaultColumnNames = true;
   }
-
+  /** Sets the Data and Metadata in the table
+  * @param {Object} options - The Object containing the data and the metadata
+  * @param {Object[]} options.data - The new data for the table.
+  * @param {Object[]} options.metadata - The metadata: describing the data, the same length as the number of properties in data.
+  * @param {String} options.metadata[].Name - The name of the column
+  * @param {number} options.metadata[].Type - The type of data that column hold.
+  */
   setData(options){
     var PQT = this;
-    if(options.data === undefined && options.metadata === undefined){
-      throw new Error("setData requres its input as an array with properties \"data\" and/or \"metadata\".");
+    if(options.data === undefined || !Array.isArray(options.data) || options.metadata === undefined || !Array.isArray(options.metadata)){
+      throw new Error("setData requres its input as an Object with properties \"data\" and \"metadata\".");
     }
-    if(options.data !== undefined && Array.isArray(options.data)){
-      this.data = options.data;
-    }
-    if(options.metadata !== undefined && Array.isArray(options.metadata)){
-      this.metadata = options.metadata;
-    }
+    this.data = options.data;
+    this.metadata = options.metadata;
     this.settings.pageNo = 1;
     this.draw();
   }
-
+  /** Sorts the data in the table based on the column in this.settings.sortColumn.*/
   sortData(){
     var PQT = this;
     PQT.data = PQT.data.sort(function(a,b){
@@ -770,7 +837,7 @@ class PHPQueryTable {
     PQT.settings.pageNo = 1;
     PQT.draw();
   }
-
+  /** Pushes the changed rows to the SQL server, given the provided URL with the POST value action=update for changed rows and acion=delete for deleted rows.*/
   push(){
     var PQT = this;
     for(var i = 0; i < this.editedRows.length; i++){
@@ -810,6 +877,7 @@ class PHPQueryTable {
       this.pendingRowRequests.push(item);
     }
   }
+  /** Updates the data using the provided URL, and redraws the table. Uses POST value "action=get".*/
   pull(){
     var PQT = this;
     var request = new XMLHttpRequest();
